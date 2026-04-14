@@ -92,11 +92,59 @@ function formatOutput(data) {
 
 // ── Commands ─────────────────────────────────────────────────────────────────
 
+/**
+ * Derive base URL from a swagger-ui URL or plain base URL.
+ * Strips known swagger UI paths and trailing slashes.
+ */
+function deriveBaseUrl(url) {
+  return url
+    .replace(/\/swagger-ui\.html.*$/i, '')
+    .replace(/\/swagger-ui\/.*$/i, '')
+    .replace(/\/swagger-resources.*$/i, '')
+    .replace(/\/v[23]\/api-docs.*$/i, '')
+    .replace(/\/+$/, '')
+}
+
+/**
+ * Try common Swagger/OpenAPI doc endpoints and return the first successful JSON response.
+ */
+function fetchFromUrl(baseUrl) {
+  const candidates = [
+    '/v2/api-docs?group=all',
+    '/v2/api-docs',
+    '/v3/api-docs',
+    '/api-docs',
+  ]
+
+  for (const suffix of candidates) {
+    const tryUrl = baseUrl + suffix
+    console.error(`Trying ${tryUrl} ...`)
+    try {
+      const result = execSync(`curl -sf --max-time 10 '${tryUrl}'`, {
+        maxBuffer: 100 * 1024 * 1024,
+        encoding: 'utf-8',
+      })
+      const doc = JSON.parse(result)
+      if (doc.paths || doc.openapi || doc.swagger) {
+        console.error(`Found swagger docs at ${tryUrl}`)
+        return result
+      }
+    } catch (_) {
+      // try next
+    }
+  }
+  return null
+}
+
 function cmdFetch(args) {
   const curlCmd = args['--curl'] || process.env.SWAGGER_CURL
-  if (!curlCmd) {
-    console.error('Error: No curl command provided.')
-    console.error('Pass via --curl or $SWAGGER_CURL, e.g.:')
+  const urlArg = args['--url']
+
+  if (!curlCmd && !urlArg) {
+    console.error('Error: No curl command or URL provided.')
+    console.error('Usage:')
+    console.error('  node swagger-lookup.js fetch --url "http://host:port/swagger-ui.html"')
+    console.error('  node swagger-lookup.js fetch --url "http://host:port"')
     console.error('  node swagger-lookup.js fetch --curl "curl -s \'https://example.com/v2/api-docs?group=all\' -H \'Cookie: ...\'"')
     process.exit(1)
   }
@@ -107,14 +155,25 @@ function cmdFetch(args) {
 
   console.error(`Fetching swagger docs...`)
   try {
-    const result = execSync(curlCmd, { maxBuffer: 100 * 1024 * 1024, encoding: 'utf-8' })
-    // Validate it's JSON
-    JSON.parse(result)
+    let result
+    if (urlArg) {
+      const baseUrl = deriveBaseUrl(urlArg)
+      console.error(`Base URL: ${baseUrl}`)
+      result = fetchFromUrl(baseUrl)
+      if (!result) {
+        console.error(`No swagger docs found at ${baseUrl}. Tried common endpoints.`)
+        console.error('Use --curl with full curl command if auth headers are needed.')
+        process.exit(1)
+      }
+    } else {
+      result = execSync(curlCmd, { maxBuffer: 100 * 1024 * 1024, encoding: 'utf-8' })
+      JSON.parse(result) // validate
+    }
+
     fs.writeFileSync(CACHE_FILE, result)
     const stats = fs.statSync(CACHE_FILE)
     console.error(`Cached to ${CACHE_FILE} (${(stats.size / 1024 / 1024).toFixed(1)} MB)`)
 
-    // Show summary
     const doc = JSON.parse(result)
     const pathCount = Object.keys(doc.paths || {}).length
     const tagCount = (doc.tags || []).length
@@ -364,7 +423,8 @@ switch (command) {
     console.log(`swagger-lookup — Filter large Swagger JSON by controller/tag/path
 
 Commands:
-  fetch --curl "curl -s '...'"   Fetch swagger JSON and cache locally
+  fetch --url "http://host:port"  Fetch swagger JSON (auto-detect endpoint)
+  fetch --curl "curl -s '...'"   Fetch swagger JSON with custom curl command
   tags                           List all tags (controllers) with endpoint counts
   summary                        Show API summary info
   get --tags "Tag1,Tag2"         Get paths for specific tags (fuzzy match)
@@ -373,10 +433,12 @@ Commands:
   models --tags "Tag1"           Get referenced DTO definitions for a tag
 
 Options:
-  --curl "..."         Curl command to fetch swagger JSON (or set $SWAGGER_CURL)
-  SWAGGER_CACHE        Cache file path (default: .swagger-cache/api-docs.json)
+  --url "..."          Swagger UI URL or base URL (auto-detects api-docs endpoint)
+  --curl "..."         Full curl command (use when auth headers are needed)
 
 Examples:
+  node swagger-lookup.js fetch --url "http://localhost:8080/swagger-ui.html"
+  node swagger-lookup.js fetch --url "http://localhost:8080"
   node swagger-lookup.js fetch --curl "curl -s 'https://api.example.com/v2/api-docs?group=all' -H 'Cookie: SESSION=abc'"
   node swagger-lookup.js tags
   node swagger-lookup.js get --tags "UserController,DepartmentController"

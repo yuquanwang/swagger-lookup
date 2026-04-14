@@ -19,7 +19,12 @@ Fetch, cache, and selectively query large Swagger/OpenAPI 2.0 JSON docs without 
 Fetch and cache the swagger JSON (user provides the curl command directly):
 
 ```bash
-node <skill-dir>/swagger-lookup.js fetch --curl "curl -s 'https://your-api.com/v2/api-docs?group=all' -H 'Cookie: ...'"
+# From a URL (auto-detects api-docs endpoint):
+node <skill-dir>/swagger-lookup.js fetch --url "http://host:port/swagger-ui.html"
+node <skill-dir>/swagger-lookup.js fetch --url "http://host:port"
+
+# With custom curl (when auth headers are needed):
+node <skill-dir>/swagger-lookup.js fetch --curl "curl -s 'https://api.example.com/v2/api-docs?group=all' -H 'Cookie: ...'"
 ```
 
 > `<skill-dir>` is the directory where this SKILL.md resides. The agent should resolve the path based on its own skill installation location.
@@ -30,7 +35,8 @@ This saves the full JSON to `.swagger-cache/api-docs.json` in the current workin
 
 | Command | Purpose |
 |---------|---------|
-| `fetch --curl "curl ..."` | Download and cache swagger JSON |
+| `fetch --url "http://host:port"` | Auto-detect and cache swagger JSON |
+| `fetch --curl "curl ..."` | Cache swagger JSON with custom curl |
 | `tags` | List all controllers/tags with endpoint counts |
 | `summary` | Show API overview (title, version, counts) |
 | `get --tags "Tag1,Tag2"` | Get paths + resolved DTOs for specific controllers |
