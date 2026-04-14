@@ -65,6 +65,20 @@ Tag matching is **fuzzy and case-insensitive**. `--tags "user"` matches `UserCon
 - `tags` and `search` output human-readable tables
 - Pipe JSON output to a file if needed: `node swagger-lookup.js get --tags "X" > /tmp/x-api.json`
 
+## Example Prompts
+
+Users may ask in various ways. The agent should recognize these and use this skill:
+
+| User prompt | Agent action |
+|-------------|-------------|
+| "swagger地址是 http://10.0.0.1:8080/swagger-ui.html，帮我查一下 UserController 的接口" | `fetch --url` → `tags` → `get --tags "User"` |
+| "Here's my curl: `curl -s 'https://...' -H '...'`, show me the expense endpoints" | `fetch --curl` → `search "expense"` or `get --tags "expense"` |
+| "这个服务 172.21.154.130:9298 有哪些 controller？" | `fetch --url` → `tags` |
+| "I need the request body schema for POST /api/v1/tasks" | `get --path "/api/v1/tasks"` (cache must exist) |
+| "帮我写一个调用 task-management detail 接口的 service 方法" | `get --tags "task-management"` → extract the detail endpoint → write code |
+| "What DTOs does the AttendanceController use?" | `models --tags "Attendance"` |
+| "搜索所有和 expense 相关的接口" | `search "expense"` |
+
 ## Common Mistakes
 
 | Mistake | Fix |
