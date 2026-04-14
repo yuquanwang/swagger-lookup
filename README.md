@@ -1,6 +1,6 @@
 # swagger-lookup
 
-A Claude Code skill for fetching, caching, and selectively querying large Swagger/OpenAPI 2.0 JSON docs without exceeding context limits.
+An AI agent skill for fetching, caching, and selectively querying large Swagger/OpenAPI 2.0 JSON docs without exceeding context limits.
 
 ## Problem
 
@@ -9,7 +9,14 @@ Large Swagger specs (e.g. 1000+ endpoints, multi-MB JSON) blow up the context wi
 ## Install
 
 ```bash
-git clone git@github.com:yuquanwang/swagger-lookup.git ~/.claude/skills/swagger-lookup
+# Claude Code
+npx skills add https://github.com/yuquanwang/swagger-lookup
+
+# Codex
+npx skills add https://github.com/yuquanwang/swagger-lookup --provider codex
+
+# OpenCode
+npx skills add https://github.com/yuquanwang/swagger-lookup --provider opencode
 ```
 
 ## Usage
@@ -17,36 +24,20 @@ git clone git@github.com:yuquanwang/swagger-lookup.git ~/.claude/skills/swagger-
 ### 1. Fetch and cache
 
 ```bash
-node ~/.claude/skills/swagger-lookup/swagger-lookup.js fetch --curl "curl -s 'https://your-api/v2/api-docs?group=all' -H 'Cookie: ...'"
+node <skill-dir>/swagger-lookup.js fetch --curl "curl -s 'https://your-api/v2/api-docs?group=all' -H 'Cookie: ...'"
 ```
 
-Or via environment variable:
-
-```bash
-export SWAGGER_CURL="curl -s 'https://your-api/v2/api-docs?group=all' -H 'Cookie: ...'"
-node ~/.claude/skills/swagger-lookup/swagger-lookup.js fetch
-```
+`<skill-dir>` is the directory where this skill was installed. The agent resolves this automatically.
 
 ### 2. Query
 
 ```bash
-# List all controllers with endpoint counts
-node swagger-lookup.js tags
-
-# Get endpoints + resolved DTOs for specific controllers (fuzzy match)
-node swagger-lookup.js get --tags "UserController,DepartmentController"
-
-# Get a specific path (partial match)
-node swagger-lookup.js get --path "/api/v1/users"
-
-# Search across paths, summaries, operationIds
-node swagger-lookup.js search "employee"
-
-# Get only the DTO definitions referenced by a controller
-node swagger-lookup.js models --tags "UserController"
-
-# Show API summary
-node swagger-lookup.js summary
+node <skill-dir>/swagger-lookup.js tags                                          # List all controllers
+node <skill-dir>/swagger-lookup.js get --tags "UserController,DepartmentController"  # Filter by controller
+node <skill-dir>/swagger-lookup.js get --path "/api/v1/users"                    # Filter by path
+node <skill-dir>/swagger-lookup.js search "employee"                             # Search keywords
+node <skill-dir>/swagger-lookup.js models --tags "UserController"                # Get referenced DTOs only
+node <skill-dir>/swagger-lookup.js summary                                       # API overview
 ```
 
 ## Commands
@@ -67,10 +58,11 @@ node swagger-lookup.js summary
 - **`$ref` resolution** — output includes all referenced DTO/model definitions, not just `$ref` pointers
 - **Zero dependencies** — pure Node.js, no npm install needed
 - **Large file support** — handles specs up to 100MB
+- **Agent-agnostic** — works with Claude Code, Codex, OpenCode, or any agent that can run shell commands
 
-## How it works with Claude Code
+## How it works
 
-Once installed, Claude Code automatically discovers this skill. In conversation:
+Once installed, the agent automatically discovers this skill. In conversation:
 
 > "Here's my curl: `curl -s 'https://...' -H '...'`, show me the UserController endpoints"
 

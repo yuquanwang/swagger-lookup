@@ -10,7 +10,7 @@ Fetch, cache, and selectively query large Swagger/OpenAPI 2.0 JSON docs without 
 ## When to Use
 
 - Need API endpoint definitions from a Swagger spec too large to load entirely
-- Writing or modifying `src/services/` code and need request/response shapes
+- Writing or modifying service/API code and need request/response shapes
 - Looking up which endpoints a controller exposes
 - Finding DTO/model definitions referenced by specific endpoints
 
@@ -19,8 +19,10 @@ Fetch, cache, and selectively query large Swagger/OpenAPI 2.0 JSON docs without 
 Fetch and cache the swagger JSON (user provides the curl command directly):
 
 ```bash
-node ~/.claude/skills/swagger-lookup/swagger-lookup.js fetch --curl "curl -s 'https://your-api.com/v2/api-docs?group=all' -H 'Cookie: ...'"
+node <skill-dir>/swagger-lookup.js fetch --curl "curl -s 'https://your-api.com/v2/api-docs?group=all' -H 'Cookie: ...'"
 ```
+
+> `<skill-dir>` is the directory where this SKILL.md resides. The agent should resolve the path based on its own skill installation location.
 
 This saves the full JSON to `.swagger-cache/api-docs.json` in the current working directory. Re-run when the API changes.
 
@@ -36,7 +38,7 @@ This saves the full JSON to `.swagger-cache/api-docs.json` in the current workin
 | `search "keyword"` | Search across paths, summaries, operationIds |
 | `models --tags "Tag1"` | Get only the DTO definitions referenced by a tag |
 
-All commands use: `node ~/.claude/skills/swagger-lookup/swagger-lookup.js <command> [args]`
+All commands use: `node <skill-dir>/swagger-lookup.js <command> [args]`
 
 ## Workflow
 
