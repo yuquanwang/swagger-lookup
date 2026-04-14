@@ -1,24 +1,15 @@
 # swagger-lookup
 
-Fetch, cache, and selectively query large Swagger/OpenAPI 2.0 JSON docs without exceeding context limits.
+A Claude Code skill for fetching, caching, and selectively querying large Swagger/OpenAPI 2.0 JSON docs without exceeding context limits.
 
 ## Problem
 
-Large Swagger specs (e.g. 1000+ endpoints, multi-MB JSON) blow up the context window when fetched directly. This tool caches the full spec locally and provides filtered queries by controller/tag, path, or keyword — with full `$ref` resolution.
+Large Swagger specs (e.g. 1000+ endpoints, multi-MB JSON) blow up the context window when fetched directly. This skill caches the full spec locally and provides filtered queries by controller/tag, path, or keyword — with full `$ref` resolution.
 
 ## Install
 
 ```bash
-# Option 1: npx (no install needed)
-npx swagger-lookup tags
-
-# Option 2: global install
-npm install -g swagger-lookup
-swagger-lookup tags
-
-# Option 3: clone and run directly
-git clone https://github.com/yuquanwang/swagger-lookup.git
-node swagger-lookup/swagger-lookup.js tags
+git clone git@github.com:yuquanwang/swagger-lookup.git ~/.claude/skills/swagger-lookup
 ```
 
 ## Usage
@@ -26,25 +17,36 @@ node swagger-lookup/swagger-lookup.js tags
 ### 1. Fetch and cache
 
 ```bash
-swagger-lookup fetch --curl "curl -s 'https://your-api/v2/api-docs?group=all' -H 'Cookie: ...'"
+node ~/.claude/skills/swagger-lookup/swagger-lookup.js fetch --curl "curl -s 'https://your-api/v2/api-docs?group=all' -H 'Cookie: ...'"
 ```
 
 Or via environment variable:
 
 ```bash
 export SWAGGER_CURL="curl -s 'https://your-api/v2/api-docs?group=all' -H 'Cookie: ...'"
-swagger-lookup fetch
+node ~/.claude/skills/swagger-lookup/swagger-lookup.js fetch
 ```
 
 ### 2. Query
 
 ```bash
-swagger-lookup tags                                          # List all controllers
-swagger-lookup get --tags "UserController,DepartmentController"  # Filter by controller
-swagger-lookup get --path "/api/v1/users"                    # Filter by path
-swagger-lookup search "employee"                             # Search keywords
-swagger-lookup models --tags "UserController"                # Get referenced DTOs only
-swagger-lookup summary                                       # API overview
+# List all controllers with endpoint counts
+node swagger-lookup.js tags
+
+# Get endpoints + resolved DTOs for specific controllers (fuzzy match)
+node swagger-lookup.js get --tags "UserController,DepartmentController"
+
+# Get a specific path (partial match)
+node swagger-lookup.js get --path "/api/v1/users"
+
+# Search across paths, summaries, operationIds
+node swagger-lookup.js search "employee"
+
+# Get only the DTO definitions referenced by a controller
+node swagger-lookup.js models --tags "UserController"
+
+# Show API summary
+node swagger-lookup.js summary
 ```
 
 ## Commands
@@ -66,35 +68,18 @@ swagger-lookup summary                                       # API overview
 - **Zero dependencies** — pure Node.js, no npm install needed
 - **Large file support** — handles specs up to 100MB
 
-## Use with AI Coding Agents
+## How it works with Claude Code
 
-Works with any AI coding agent that can run shell commands:
+Once installed, Claude Code automatically discovers this skill. In conversation:
 
-| Environment | How to use |
-|-------------|-----------|
-| **Claude Code** | Install as skill to `~/.claude/skills/swagger-lookup/`, auto-discovered |
-| **Cursor** | Add to project rules or run via terminal |
-| **Copilot CLI** | Run commands directly in terminal |
-| **Codex / Gemini CLI** | Run commands directly in terminal |
-| **Any terminal** | `npx swagger-lookup <command>` |
+> "Here's my curl: `curl -s 'https://...' -H '...'`, show me the UserController endpoints"
 
-### Claude Code Skill Setup
+The agent will:
+1. Run `fetch --curl "..."` to cache the spec
+2. Run `get --tags "User"` to filter
+3. Return the matching endpoints with full DTO definitions
 
-```bash
-git clone git@github.com:yuquanwang/swagger-lookup.git ~/.claude/skills/swagger-lookup
-```
-
-### Cursor / Windsurf Rules
-
-Add to your `.cursorrules` or project rules:
-
-```
-When looking up API endpoints from Swagger, use the swagger-lookup CLI:
-  npx swagger-lookup fetch --curl "<curl command>"
-  npx swagger-lookup tags
-  npx swagger-lookup get --tags "<controller>"
-Cache is stored at .swagger-cache/api-docs.json
-```
+Subsequent queries in the same session reuse the cache.
 
 ## Cache
 

@@ -10,32 +10,19 @@ Fetch, cache, and selectively query large Swagger/OpenAPI 2.0 JSON docs without 
 ## When to Use
 
 - Need API endpoint definitions from a Swagger spec too large to load entirely
-- Writing or modifying service/API code and need request/response shapes
+- Writing or modifying `src/services/` code and need request/response shapes
 - Looking up which endpoints a controller exposes
 - Finding DTO/model definitions referenced by specific endpoints
 
 ## Setup
 
+Fetch and cache the swagger JSON (user provides the curl command directly):
+
 ```bash
-# Option 1: npx (no install)
-npx swagger-lookup <command>
-
-# Option 2: global install
-npm install -g swagger-lookup
-swagger-lookup <command>
-
-# Option 3: run from source
-node /path/to/swagger-lookup.js <command>
+node ~/.claude/skills/swagger-lookup/swagger-lookup.js fetch --curl "curl -s 'https://your-api.com/v2/api-docs?group=all' -H 'Cookie: ...'"
 ```
 
-## Workflow
-
-```
-1. User provides curl command → run `swagger-lookup fetch --curl "..."` to cache
-2. Use `swagger-lookup tags` to find the controller name
-3. Use `swagger-lookup get --tags "ControllerName"` to get endpoints + DTOs
-4. Use output to write/update service code
-```
+This saves the full JSON to `.swagger-cache/api-docs.json` in the current working directory. Re-run when the API changes.
 
 ## Quick Reference
 
@@ -49,6 +36,17 @@ node /path/to/swagger-lookup.js <command>
 | `search "keyword"` | Search across paths, summaries, operationIds |
 | `models --tags "Tag1"` | Get only the DTO definitions referenced by a tag |
 
+All commands use: `node ~/.claude/skills/swagger-lookup/swagger-lookup.js <command> [args]`
+
+## Workflow
+
+```
+1. User provides curl command → run `fetch --curl "..."` to cache (skip if cache exists)
+2. Use `tags` to find the controller name
+3. Use `get --tags "ControllerName"` to get endpoints + DTOs
+4. Use output to write/update service code
+```
+
 ## Tag Matching
 
 Tag matching is **fuzzy and case-insensitive**. `--tags "user"` matches `UserController`, `user-management-controller`, etc. Separate multiple tags with commas.
@@ -57,7 +55,7 @@ Tag matching is **fuzzy and case-insensitive**. `--tags "user"` matches `UserCon
 
 - `get` and `models` output JSON with `$ref` references resolved — all referenced DTOs are included in the `definitions` section
 - `tags` and `search` output human-readable tables
-- Pipe JSON output to a file if needed: `swagger-lookup get --tags "X" > /tmp/x-api.json`
+- Pipe JSON output to a file if needed: `node swagger-lookup.js get --tags "X" > /tmp/x-api.json`
 
 ## Common Mistakes
 
